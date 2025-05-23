@@ -101,10 +101,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
   Widget _buildBookingCard(Map<String, dynamic> booking) {
     bool isUpcoming = booking["status"] == "Upcoming";
 
-    // ✅ Ensure Image Exists, Otherwise Use Default
-    String imagePath = (booking.containsKey("image") && booking["image"] != null && booking["image"].isNotEmpty)
-        ? booking["image"]
-        : "assets/images/default_room.jpg"; // ✅ Default image fallback
+    // Use imagePath from booking data
+    String imagePath = booking["imagePath"] ?? "assets/images/default_room.jpg";
 
     return Container(
       margin: EdgeInsets.only(bottom: 15),
@@ -116,7 +114,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ✅ Display Room Image or Default Image
+          // Display Room Image
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: Image.asset(
@@ -124,6 +122,15 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
               width: double.infinity,
               height: 120,
               fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                debugPrint('Error loading image: $error');
+                return Container(
+                  width: double.infinity,
+                  height: 120,
+                  color: Colors.grey[300],
+                  child: Icon(Icons.error_outline, size: 50),
+                );
+              },
             ),
           ),
 

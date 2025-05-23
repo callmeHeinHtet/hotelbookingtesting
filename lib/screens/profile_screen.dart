@@ -1,176 +1,218 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'edit_profile_screen.dart';
-import '../widgets/bottom_nav_bar.dart';
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
 
-class ProfileScreen extends StatefulWidget {
-  @override
-  _ProfileScreenState createState() => _ProfileScreenState();
-}
-
-class _ProfileScreenState extends State<ProfileScreen> {
-  String _username = "Guest";
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUsername();
-  }
-
-  Future<void> _loadUsername() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _username = prefs.getString("username") ?? "Guest";
-    });
-  }
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-
-      body: Column(
-        children: [
-          // TOP BLACK HEADER
-          Container(
-            color: Colors.black,
-            padding: EdgeInsets.fromLTRB(10, 50, 20, 20),
-            child: Row(
+      appBar: AppBar(
+        title: const Text('Profile'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
+        ),
+      ),
+      body: Consumer<UserProvider>(
+        builder: (context, userProvider, child) {
+          return SingleChildScrollView(
+            child: Column(
               children: [
-                // Back Button
-                IconButton(
-                  icon: Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                SizedBox(width: 10),
-
-                // Avatar + Info
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.person, size: 30, color: Colors.black),
-                ),
-                SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _username,
-                      style: TextStyle(
-                          color: Color(0xFFB2D732),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18),
-                    ),
-                    Text("Gold Member", style: TextStyle(color: Colors.white70)),
-                  ],
-                ),
-                Spacer(),
-
-                // Edit Profile Link
-                GestureDetector(
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => EditProfileScreen()),
-                    );
-                    _loadUsername();
-                  },
-                  child: Text(
-                    "Edit Profile",
-                    style: TextStyle(
-                      color: Color(0xFFB2D732),
-                      decoration: TextDecoration.underline,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // SETTINGS + CONTACT
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              children: [
-                _sectionTitle("Setting"),
-                _settingItem(Icons.language, "Language"),
-                _settingItem(Icons.lock_outline, "Change Password"),
-                _settingSwitchItem("Allow Notification", true),
-                _settingItem(Icons.credit_card, "Credit/ Debit Card"),
-                _settingItem(Icons.location_on_outlined, "My Addresses"),
-                _settingItem(Icons.delete_forever, "Delete My Account"),
-                SizedBox(height: 20),
-
-                _sectionTitle("Customer Support"),
-                _settingItem(Icons.description_outlined, "Terms and Conditions"),
-                SizedBox(height: 20),
-
-                _sectionTitle("Contact Us"),
-                ListTile(
-                  leading: Icon(Icons.email_outlined),
-                  title: Text("Email"),
-                  trailing: Text("cimso@gmail.com", style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-                ListTile(
-                  leading: Icon(Icons.call),
-                  title: Text("Call Center"),
-                  trailing: Text("02 123 4567", style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-                SizedBox(height: 20),
-
-                Center(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // TODO: handle logout
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFB2D732),
-                      padding: EdgeInsets.symmetric(horizontal: 50, vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+                // Profile Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundImage: AssetImage(userProvider.profilePhotoPath),
                       ),
-                    ),
-                    child: Text("Log Out", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 10),
+                      Text(
+                        userProvider.name,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        userProvider.email,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+
+                // Statistics Section
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildStatItem('Bookings', '12'),
+                      _buildStatItem('Points', '2,500'),
+                      _buildStatItem('Reviews', '8'),
+                    ],
+                  ),
+                ),
+
+                // Personal Information Section
+                _buildSection(
+                  context,
+                  'Personal Information',
+                  [
+                    _buildInfoItem(Icons.person, 'Name', userProvider.name),
+                    _buildInfoItem(Icons.email, 'Email', userProvider.email),
+                    _buildInfoItem(Icons.phone, 'Phone', userProvider.phone),
+                    _buildInfoItem(Icons.location_on, 'Address', userProvider.address),
+                  ],
+                  onEdit: () => Navigator.pushNamed(context, '/edit-personal-info'),
+                ),
+
+                // Payment Methods Section
+                _buildSection(
+                  context,
+                  'Payment Methods',
+                  userProvider.paymentMethods.map((method) {
+                    return _buildInfoItem(
+                      Icons.credit_card,
+                      method['type'] ?? '',
+                      method['number'] ?? '',
+                    );
+                  }).toList(),
+                  onEdit: () => Navigator.pushNamed(context, '/edit-payment-methods'),
+                ),
+
+                // Addresses Section
+                _buildSection(
+                  context,
+                  'Addresses',
+                  userProvider.addresses.map((address) {
+                    return _buildInfoItem(
+                      Icons.location_on,
+                      address['type'] ?? '',
+                      address['address'] ?? '',
+                    );
+                  }).toList(),
+                  onEdit: () => Navigator.pushNamed(context, '/edit-addresses'),
+                ),
+
+                // Documents Section
+                _buildSection(
+                  context,
+                  'Documents',
+                  userProvider.documents.map((doc) {
+                    return _buildInfoItem(
+                      Icons.description,
+                      doc['type'] ?? '',
+                      'Expires: ${doc['expiry']}',
+                    );
+                  }).toList(),
+                  onEdit: () => Navigator.pushNamed(context, '/edit-documents'),
+                ),
+
+                // Emergency Contacts Section
+                _buildSection(
+                  context,
+                  'Emergency Contacts',
+                  userProvider.emergencyContacts.map((contact) {
+                    return _buildInfoItem(
+                      Icons.contact_phone,
+                      contact['name'] ?? '',
+                      '${contact['relation']} - ${contact['phone']}',
+                    );
+                  }).toList(),
+                  onEdit: () => Navigator.pushNamed(context, '/edit-emergency-contacts'),
+                ),
+
+                const SizedBox(height: 20),
               ],
             ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSection(
+    BuildContext context,
+    String title,
+    List<Widget> items, {
+    VoidCallback? onEdit,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 5,
           ),
         ],
       ),
-
-      // ✅ Using your BottomNavBar widget
-      bottomNavigationBar: BottomNavBar(selectedIndex: 3),
-    );
-  }
-
-  Widget _sectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Text(
-        title,
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(15),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (onEdit != null)
+                  TextButton(
+                    onPressed: onEdit,
+                    child: const Text('Edit'),
+                  ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          ...items,
+        ],
       ),
     );
   }
 
-  Widget _settingItem(IconData icon, String label) {
+  Widget _buildInfoItem(IconData icon, String title, String subtitle) {
     return ListTile(
-      leading: Icon(icon),
-      title: Text(label),
-      trailing: Icon(Icons.arrow_forward_ios, size: 16),
-    );
-  }
-
-  Widget _settingSwitchItem(String label, bool value) {
-    return SwitchListTile(
-      title: Text(label),
-      value: value,
-      activeColor: Color(0xFFB2D732),
-      onChanged: (val) {
-        // Optionally handle toggle
-      },
+      leading: Icon(icon, color: Colors.blue),
+      title: Text(title),
+      subtitle: Text(subtitle),
     );
   }
 }
