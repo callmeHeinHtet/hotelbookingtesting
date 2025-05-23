@@ -55,7 +55,7 @@ A modern Flutter application for hotel bookings with a clean UI and comprehensiv
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/hotel_booking.git
+git clone https://github.com/callmeHeinHtet/hotel_booking.git
 ```
 
 2. Navigate to the project directory:
