@@ -63,7 +63,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (pickedDate != null) {
       setState(() {
         _birthdayController.text =
-        "${pickedDate.month.toString().padLeft(2, '0')} / ${pickedDate.day.toString().padLeft(2, '0')} / ${pickedDate.year}";
+            "${pickedDate.month.toString().padLeft(2, '0')} / ${pickedDate.day.toString().padLeft(2, '0')} / ${pickedDate.year}";
       });
     }
   }
@@ -98,7 +98,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               GestureDetector(
                 onTap: _selectDate,
                 child: AbsorbPointer(
-                  child: _buildTextField(_birthdayController, "Birthdate  MM / DD / YYYY"),
+                  child: _buildTextField(
+                      _birthdayController, "Birthdate  MM / DD / YYYY"),
                 ),
               ),
 

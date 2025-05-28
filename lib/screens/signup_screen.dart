@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
 import 'login_screen.dart';
 import 'welcome_screen.dart';
 
@@ -44,36 +46,55 @@ class SignUpScreen extends StatelessWidget {
 
             // Register Button
             ElevatedButton(
-                onPressed: () async {
-                  try {
-                    final auth = FirebaseAuth.instance;
+              onPressed: () async {
+                try {
+                  final auth = FirebaseAuth.instance;
 
-                    await auth.createUserWithEmailAndPassword(
-                      email: emailController.text.trim(),
-                      password: passwordController.text.trim(),
+                  await auth.createUserWithEmailAndPassword(
+                    email: emailController.text.trim(),
+                    password: passwordController.text.trim(),
+                  );
+
+                  // Save user data in SharedPreferences
+                  SharedPreferences prefs =
+                      await SharedPreferences.getInstance();
+                  final username = usernameController.text.trim();
+                  final email = emailController.text.trim();
+
+                  // Save in all required places
+                  await prefs.setString('username', username);
+                  await prefs.setString('name', username);
+                  await prefs.setString('userEmail', email);
+                  await prefs.setString('email', email);
+
+                  // Update UserProvider
+                  if (context.mounted) {
+                    final userProvider =
+                        Provider.of<UserProvider>(context, listen: false);
+                    await userProvider.updateUserInfo(
+                      name: username,
+                      email: email,
                     );
+                  }
 
-                    // ✅ Save username and email locally
-                    SharedPreferences prefs = await SharedPreferences.getInstance();
-                    await prefs.setString("username", usernameController.text.trim());
-                    await prefs.setString("userEmail", emailController.text.trim());
+                  print("✅ Username saved: $username");
 
-                    print("✅ Username saved: ${usernameController.text.trim()}");
-
+                  if (context.mounted) {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (_) => WelcomeScreen()),
                     );
-
-                  } catch (e) {
-                    print("❌ Sign up error: $e");
+                  }
+                } catch (e) {
+                  print("❌ Sign up error: $e");
+                  if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("Error: ${e.toString()}")),
                     );
                   }
-                },
-
-                style: ElevatedButton.styleFrom(
+                }
+              },
+              style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xFFD4E157),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),

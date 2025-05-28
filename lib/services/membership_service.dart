@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum MembershipTier {
-  Bronze,
-  Silver,
-  Gold,
-  Platinum
-}
+enum MembershipTier { Bronze, Silver, Gold, Platinum }
 
 class TierRequirement {
   final int pointsRequired;
@@ -54,10 +49,14 @@ class MembershipService {
   };
 
   static final Map<MembershipTier, TierRequirement> tierRequirements = {
-    MembershipTier.Bronze: const TierRequirement(pointsRequired: 0, staysRequired: 0),
-    MembershipTier.Silver: const TierRequirement(pointsRequired: 1000, staysRequired: 3),
-    MembershipTier.Gold: const TierRequirement(pointsRequired: 5000, staysRequired: 10),
-    MembershipTier.Platinum: const TierRequirement(pointsRequired: 20000, staysRequired: 25),
+    MembershipTier.Bronze:
+        const TierRequirement(pointsRequired: 0, staysRequired: 0),
+    MembershipTier.Silver:
+        const TierRequirement(pointsRequired: 1000, staysRequired: 3),
+    MembershipTier.Gold:
+        const TierRequirement(pointsRequired: 5000, staysRequired: 10),
+    MembershipTier.Platinum:
+        const TierRequirement(pointsRequired: 20000, staysRequired: 25),
   };
 
   static final List<MembershipBenefit> benefits = [
@@ -71,19 +70,32 @@ class MembershipService {
       title: 'Early Check-in',
       description: 'Check in up to 2 hours early',
       icon: Icons.access_time,
-      availableFor: [MembershipTier.Silver, MembershipTier.Gold, MembershipTier.Platinum],
+      availableFor: [
+        MembershipTier.Silver,
+        MembershipTier.Gold,
+        MembershipTier.Platinum
+      ],
     ),
     const MembershipBenefit(
       title: 'Late Check-out',
       description: 'Check out up to 2 hours late',
       icon: Icons.time_to_leave,
-      availableFor: [MembershipTier.Silver, MembershipTier.Gold, MembershipTier.Platinum],
+      availableFor: [
+        MembershipTier.Silver,
+        MembershipTier.Gold,
+        MembershipTier.Platinum
+      ],
     ),
     const MembershipBenefit(
       title: 'Welcome Drink',
       description: 'Free welcome drink at check-in',
       icon: Icons.local_bar,
-      availableFor: [MembershipTier.Bronze, MembershipTier.Silver, MembershipTier.Gold, MembershipTier.Platinum],
+      availableFor: [
+        MembershipTier.Bronze,
+        MembershipTier.Silver,
+        MembershipTier.Gold,
+        MembershipTier.Platinum
+      ],
     ),
     const MembershipBenefit(
       title: 'Lounge Access',
@@ -107,7 +119,11 @@ class MembershipService {
       title: 'Restaurant Discount',
       description: '15% off at hotel restaurants',
       icon: Icons.restaurant,
-      availableFor: [MembershipTier.Silver, MembershipTier.Gold, MembershipTier.Platinum],
+      availableFor: [
+        MembershipTier.Silver,
+        MembershipTier.Gold,
+        MembershipTier.Platinum
+      ],
     ),
     const MembershipBenefit(
       title: 'Free Breakfast',
@@ -119,7 +135,11 @@ class MembershipService {
       title: 'Room Discount',
       description: 'Up to 20% off room rates',
       icon: Icons.hotel,
-      availableFor: [MembershipTier.Silver, MembershipTier.Gold, MembershipTier.Platinum],
+      availableFor: [
+        MembershipTier.Silver,
+        MembershipTier.Gold,
+        MembershipTier.Platinum
+      ],
     ),
   ];
 
@@ -129,38 +149,47 @@ class MembershipService {
   }
 
   static MembershipTier getTierFromPoints(int points, int stays) {
-    if (points >= tierRequirements[MembershipTier.Platinum]!.pointsRequired && 
+    if (points >= tierRequirements[MembershipTier.Platinum]!.pointsRequired &&
         stays >= tierRequirements[MembershipTier.Platinum]!.staysRequired) {
       return MembershipTier.Platinum;
-    } else if (points >= tierRequirements[MembershipTier.Gold]!.pointsRequired && 
-               stays >= tierRequirements[MembershipTier.Gold]!.staysRequired) {
+    } else if (points >=
+            tierRequirements[MembershipTier.Gold]!.pointsRequired &&
+        stays >= tierRequirements[MembershipTier.Gold]!.staysRequired) {
       return MembershipTier.Gold;
-    } else if (points >= tierRequirements[MembershipTier.Silver]!.pointsRequired && 
-               stays >= tierRequirements[MembershipTier.Silver]!.staysRequired) {
+    } else if (points >=
+            tierRequirements[MembershipTier.Silver]!.pointsRequired &&
+        stays >= tierRequirements[MembershipTier.Silver]!.staysRequired) {
       return MembershipTier.Silver;
     }
     return MembershipTier.Bronze;
   }
 
-  static int getPointsToNextTier(int currentPoints, MembershipTier currentTier) {
+  static int getPointsToNextTier(
+      int currentPoints, MembershipTier currentTier) {
     switch (currentTier) {
       case MembershipTier.Bronze:
-        return tierRequirements[MembershipTier.Silver]!.pointsRequired - currentPoints;
+        return tierRequirements[MembershipTier.Silver]!.pointsRequired -
+            currentPoints;
       case MembershipTier.Silver:
-        return tierRequirements[MembershipTier.Gold]!.pointsRequired - currentPoints;
+        return tierRequirements[MembershipTier.Gold]!.pointsRequired -
+            currentPoints;
       case MembershipTier.Gold:
-        return tierRequirements[MembershipTier.Platinum]!.pointsRequired - currentPoints;
+        return tierRequirements[MembershipTier.Platinum]!.pointsRequired -
+            currentPoints;
       case MembershipTier.Platinum:
         return 0;
     }
   }
 
   static List<MembershipBenefit> getBenefitsForTier(MembershipTier tier) {
-    return benefits.where((benefit) => benefit.availableFor.contains(tier)).toList();
+    return benefits
+        .where((benefit) => benefit.availableFor.contains(tier))
+        .toList();
   }
 
   static Color getTierColor(MembershipTier tier) {
-    return tierColors[tier] ?? const Color(0xFFCD7F32); // Default to Bronze color
+    return tierColors[tier] ??
+        const Color(0xFFCD7F32); // Default to Bronze color
   }
 
   static String getTierName(MembershipTier tier) {
@@ -171,4 +200,4 @@ class MembershipService {
     // Points expire after 2 years
     return earnedDate.add(const Duration(days: 730));
   }
-} 
+}

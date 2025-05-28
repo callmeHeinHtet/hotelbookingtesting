@@ -43,6 +43,7 @@ dependencies:
   hive_flutter: ^1.1.0
   shared_preferences: ^2.2.2
   share_plus: ^7.2.1
+  table_calendar: ^3.0.9
 
 dev_dependencies:
   flutter_test:
@@ -68,6 +69,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/visa.png
     - assets/images/single_room.jpg
     - assets/images/deluxe_room.jpg
     - assets/images/superior_room.jpg

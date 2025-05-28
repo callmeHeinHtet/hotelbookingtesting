@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../utils/booking_data.dart';
 import '../widgets/bottom_nav_bar.dart';
 
@@ -8,7 +9,7 @@ class BookingHistoryScreen extends StatefulWidget {
 }
 
 class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
-  String selectedTab = "Upcoming"; // Default tab
+  String _selectedStatus = 'Upcoming';
 
   @override
   Widget build(BuildContext context) {
@@ -17,6 +18,14 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/home',
+            (route) => false,
+          ),
+        ),
         title: Text(
           "Booking History",
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
@@ -31,11 +40,11 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 20),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildTab("Upcoming"),
-                _buildTab("Completed"),
-                _buildTab("Cancelled"),
+                _buildStatusButton('Upcoming'),
+                _buildStatusButton('Completed'),
+                _buildStatusButton('Cancelled'),
               ],
             ),
           ),
@@ -55,28 +64,30 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
     );
   }
 
-  // Tab Builder
-  Widget _buildTab(String tabName) {
-    bool isSelected = selectedTab == tabName;
-    return GestureDetector(
-      onTap: () {
+  Widget _buildStatusButton(String status) {
+    final isSelected = _selectedStatus == status;
+    return ElevatedButton(
+      onPressed: () {
         setState(() {
-          selectedTab = tabName;
+          _selectedStatus = status;
         });
       },
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.black : Colors.transparent,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isSelected ? const Color(0xFFD4E157) : Colors.white,
+        foregroundColor: isSelected ? Colors.black : Colors.grey,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.black),
-        ),
-        child: Text(
-          tabName,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.black,
-            fontWeight: FontWeight.bold,
+          side: BorderSide(
+            color: isSelected ? const Color(0xFFD4E157) : Colors.grey,
           ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      ),
+      child: Text(
+        status,
+        style: TextStyle(
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
       ),
     );
@@ -86,15 +97,17 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
   List<Widget> _getBookingsForTab() {
     List<Map<String, dynamic>> filteredBookings;
 
-    if (selectedTab == "Completed") {
+    if (_selectedStatus == "Completed") {
       filteredBookings = getBookingsByStatus("Completed");
-    } else if (selectedTab == "Cancelled") {
+    } else if (_selectedStatus == "Cancelled") {
       filteredBookings = getBookingsByStatus("Cancelled");
     } else {
       filteredBookings = getBookingsByStatus("Upcoming");
     }
 
-    return filteredBookings.map((booking) => _buildBookingCard(booking)).toList();
+    return filteredBookings
+        .map((booking) => _buildBookingCard(booking))
+        .toList();
   }
 
   // ✅ Fixed Booking Card UI
@@ -153,7 +166,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                   ),
                   Text(
                     "Room Type: ${booking["roomTitle"] ?? "N/A"}",
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                   Text(
                     "People: ${booking["guests"]}",
@@ -174,7 +188,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                 onTap: () {
                   _cancelBooking(booking);
                 },
-                child: Text("Cancel Booking", style: TextStyle(color: Colors.red)),
+                child:
+                    Text("Cancel Booking", style: TextStyle(color: Colors.red)),
               ),
             ),
         ],

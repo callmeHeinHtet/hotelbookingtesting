@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
 import 'forgot_password_screen.dart';
 import 'welcome_screen.dart';
+import 'signup_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   final TextEditingController usernameController = TextEditingController();
@@ -27,13 +30,10 @@ class LoginScreen extends StatelessWidget {
               ),
             ),
             SizedBox(height: 32),
-
             _buildTextField(usernameController, 'Email'),
             SizedBox(height: 16),
-
             _buildTextField(passwordController, 'Password', obscureText: true),
             SizedBox(height: 16),
-
             Align(
               alignment: Alignment.centerRight,
               child: GestureDetector(
@@ -54,7 +54,6 @@ class LoginScreen extends StatelessWidget {
               ),
             ),
             SizedBox(height: 24),
-
             ElevatedButton(
               onPressed: () async {
                 try {
@@ -63,21 +62,45 @@ class LoginScreen extends StatelessWidget {
                     password: passwordController.text.trim(),
                   );
 
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => WelcomeScreen()),
-                  );
-                } catch (e) {
                   SharedPreferences prefs =
-                  await SharedPreferences.getInstance();
-                  String? storedEmail = prefs.getString("userEmail");
+                      await SharedPreferences.getInstance();
+                  final email = usernameController.text.trim();
 
-                  if (storedEmail == usernameController.text.trim()) {
+                  // Try to get the stored username for this email
+                  String? username = prefs.getString('username');
+                  if (username == null || username.isEmpty) {
+                    username = prefs.getString('name');
+                  }
+
+                  // If we have a valid username, use it
+                  if (username != null &&
+                      username.isNotEmpty &&
+                      username != 'Guest User') {
+                    // Save username and email in all places
+                    await prefs.setString('username', username);
+                    await prefs.setString('name', username);
+                    await prefs.setString('email', email);
+                    await prefs.setString('userEmail', email);
+
+                    // Update UserProvider
+                    if (context.mounted) {
+                      final userProvider =
+                          Provider.of<UserProvider>(context, listen: false);
+                      await userProvider.updateUserInfo(
+                        name: username,
+                        email: email,
+                      );
+                    }
+                  }
+
+                  if (context.mounted) {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (_) => WelcomeScreen()),
                     );
-                  } else {
+                  }
+                } catch (e) {
+                  if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("Login failed: ${e.toString()}")),
                     );
@@ -101,14 +124,12 @@ class LoginScreen extends StatelessWidget {
               ),
             ),
             SizedBox(height: 24),
-
             Text(
               'or Sign In using',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16),
             ),
             SizedBox(height: 16),
-
             Wrap(
               spacing: 20,
               alignment: WrapAlignment.center,
@@ -116,6 +137,28 @@ class LoginScreen extends StatelessWidget {
                 _buildSocialButton('assets/images/facebook.png'),
                 _buildSocialButton('assets/images/google.png'),
                 _buildSocialButton('assets/images/line.png'),
+              ],
+            ),
+            SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text("Don't have an account? "),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => SignUpScreen()),
+                    );
+                  },
+                  child: Text(
+                    "Register",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
               ],
             ),
           ],

@@ -101,4 +101,4 @@ class AppDimensions {
   static const double tabHeight = 40.0;
   static const double serviceCardHeight = 120.0;
   static const double couponCardHeight = 150.0;
-} 
+}

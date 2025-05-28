@@ -6,10 +6,9 @@ import '../widgets/bottom_nav_bar.dart';
 import '../constants/app_constants.dart';
 import '../constants/data_constants.dart';
 import '../providers/tab_provider.dart';
-import '../providers/coupon_provider.dart';
 
 /// The main welcome screen of the application.
-/// 
+///
 /// Displays:
 /// - User welcome header
 /// - Popular room listings
@@ -30,7 +29,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   void initState() {
     super.initState();
     _loadUsername();
-    _loadCoupons();
   }
 
   @override
@@ -53,11 +51,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     } finally {
       _isLoading.value = false;
     }
-  }
-
-  Future<void> _loadCoupons() async {
-    final couponProvider = Provider.of<CouponProvider>(context, listen: false);
-    await couponProvider.loadCoupons();
   }
 
   @override
@@ -85,7 +78,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 child: RefreshIndicator(
                   onRefresh: () async {
                     await _loadUsername();
-                    await _loadCoupons();
                   },
                   child: Consumer<TabProvider>(
                     builder: (context, tabProvider, _) {
@@ -121,10 +113,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         child: FloatingActionButton(
           backgroundColor: AppConstants.primaryColor,
           onPressed: () {},
-          child: const Icon(Icons.support_agent, color: AppConstants.blackColor),
+          child:
+              const Icon(Icons.support_agent, color: AppConstants.blackColor),
         ),
       ),
-      bottomNavigationBar: BottomNavBar(selectedIndex: 0),
+      bottomNavigationBar: const BottomNavBar(selectedIndex: 0),
     );
   }
 }
@@ -269,7 +262,8 @@ class _TabButton extends StatelessWidget {
         child: Text(
           title,
           style: TextStyle(
-            color: isSelected ? AppConstants.blackColor : AppConstants.greyColor,
+            color:
+                isSelected ? AppConstants.blackColor : AppConstants.greyColor,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),
@@ -298,7 +292,8 @@ class _RoomsContent extends StatelessWidget {
             height: 200,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimensions.defaultPadding),
               children: const [
                 _RoomCard(
                   title: 'Single Room',
@@ -390,24 +385,132 @@ class _CouponsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<CouponProvider>(
-      builder: (context, couponProvider, _) {
-        if (couponProvider.isLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    final List<Map<String, dynamic>> couponCodes = [
+      {
+        'code': 'WELCOME10',
+        'description': '10% off your first booking',
+        'color': Colors.blue,
+      },
+      {
+        'code': 'SUMMER25',
+        'description': '25% off on summer bookings',
+        'color': Colors.orange,
+      },
+      {
+        'code': 'VIP15',
+        'description': '15% off for VIP members',
+        'color': Colors.purple,
+      },
+      {
+        'code': 'SPA20',
+        'description': '20% off on spa services',
+        'color': Colors.green,
+      },
+      {
+        'code': 'DINE15',
+        'description': '15% off on dining',
+        'color': Colors.red,
+      },
+    ];
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(AppDimensions.defaultPadding),
-          child: Column(
-            children: couponProvider.coupons.map((category) {
-              return _CouponCategory(
-                title: category['category'],
-                coupons: category['items'],
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppDimensions.defaultPadding),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Visual Coupons
+          ...CouponData.coupons.map((category) {
+            return _CouponCategory(
+              title: category['category'],
+              coupons: category['items'],
+            );
+          }).toList(),
+
+          // Coupon Codes Section
+          const SizedBox(height: 20),
+          Text(
+            'Available Coupon Codes',
+            style: AppStyles.headerStyle,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Use these codes during checkout to get discounts',
+            style: TextStyle(
+              color: AppConstants.greyColor,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Column(
+            children: couponCodes.map((coupon) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: coupon['color'].withOpacity(0.3)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              coupon['code'],
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: coupon['color'],
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              coupon['description'],
+                              style: TextStyle(
+                                color: AppConstants.greyColor,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content:
+                                  Text('Coupon code ${coupon['code']} copied!'),
+                              backgroundColor: coupon['color'],
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        icon:
+                            Icon(Icons.copy, size: 16, color: coupon['color']),
+                        label: Text(
+                          'Copy',
+                          style: TextStyle(color: coupon['color']),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               );
             }).toList(),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }
@@ -451,7 +554,8 @@ class _RoomCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(15)),
               child: Image.asset(
                 imagePath,
                 height: 120,
@@ -501,7 +605,8 @@ class _ServiceCard extends StatelessWidget {
         children: [
           Expanded(
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(15)),
               child: Image.asset(
                 imagePath,
                 width: double.infinity,
@@ -593,7 +698,8 @@ class _CouponCard extends StatelessWidget {
         children: [
           Expanded(
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(15)),
               child: Image.asset(
                 imagePath,
                 width: double.infinity,

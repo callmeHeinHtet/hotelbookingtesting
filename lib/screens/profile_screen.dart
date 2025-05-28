@@ -1,218 +1,257 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
+import '../widgets/profile/personal_info_section.dart';
+import '../widgets/profile/saved_info_section.dart';
+import '../widgets/profile/statistics_section.dart';
+import '../widgets/bottom_nav_bar.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);
 
+  Future<void> _handleLogout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      // Clear user data
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      await userProvider.logout();
+
+      if (context.mounted) {
+        // Navigate to login and clear the stack
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/login',
+          (route) => false,
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
-        ),
-      ),
-      body: Consumer<UserProvider>(
-        builder: (context, userProvider, child) {
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                // Profile Header
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundImage: AssetImage(userProvider.profilePhotoPath),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        userProvider.name,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        userProvider.email,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+    final bool isFromBottomNav = !Navigator.of(context).canPop();
 
-                // Statistics Section
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildStatItem('Bookings', '12'),
-                      _buildStatItem('Points', '2,500'),
-                      _buildStatItem('Reviews', '8'),
-                    ],
-                  ),
-                ),
-
-                // Personal Information Section
-                _buildSection(
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, child) {
+        return WillPopScope(
+          onWillPop: () async {
+            if (!isFromBottomNav) {
+              Navigator.pop(context);
+              return false;
+            }
+            return false;
+          },
+          child: Scaffold(
+            backgroundColor: Colors.grey[100],
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.black),
+                onPressed: () => Navigator.pushNamedAndRemoveUntil(
                   context,
-                  'Personal Information',
-                  [
-                    _buildInfoItem(Icons.person, 'Name', userProvider.name),
-                    _buildInfoItem(Icons.email, 'Email', userProvider.email),
-                    _buildInfoItem(Icons.phone, 'Phone', userProvider.phone),
-                    _buildInfoItem(Icons.location_on, 'Address', userProvider.address),
-                  ],
-                  onEdit: () => Navigator.pushNamed(context, '/edit-personal-info'),
+                  '/home',
+                  (route) => false,
                 ),
-
-                // Payment Methods Section
-                _buildSection(
-                  context,
-                  'Payment Methods',
-                  userProvider.paymentMethods.map((method) {
-                    return _buildInfoItem(
-                      Icons.credit_card,
-                      method['type'] ?? '',
-                      method['number'] ?? '',
-                    );
-                  }).toList(),
-                  onEdit: () => Navigator.pushNamed(context, '/edit-payment-methods'),
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.logout, color: Colors.black),
+                  onPressed: () => _handleLogout(context),
                 ),
-
-                // Addresses Section
-                _buildSection(
-                  context,
-                  'Addresses',
-                  userProvider.addresses.map((address) {
-                    return _buildInfoItem(
-                      Icons.location_on,
-                      address['type'] ?? '',
-                      address['address'] ?? '',
-                    );
-                  }).toList(),
-                  onEdit: () => Navigator.pushNamed(context, '/edit-addresses'),
-                ),
-
-                // Documents Section
-                _buildSection(
-                  context,
-                  'Documents',
-                  userProvider.documents.map((doc) {
-                    return _buildInfoItem(
-                      Icons.description,
-                      doc['type'] ?? '',
-                      'Expires: ${doc['expiry']}',
-                    );
-                  }).toList(),
-                  onEdit: () => Navigator.pushNamed(context, '/edit-documents'),
-                ),
-
-                // Emergency Contacts Section
-                _buildSection(
-                  context,
-                  'Emergency Contacts',
-                  userProvider.emergencyContacts.map((contact) {
-                    return _buildInfoItem(
-                      Icons.contact_phone,
-                      contact['name'] ?? '',
-                      '${contact['relation']} - ${contact['phone']}',
-                    );
-                  }).toList(),
-                  onEdit: () => Navigator.pushNamed(context, '/edit-emergency-contacts'),
-                ),
-
-                const SizedBox(height: 20),
               ],
             ),
-          );
-        },
-      ),
+            body: CustomScrollView(
+              slivers: [
+                // Custom App Bar with Profile Summary
+                SliverAppBar(
+                  expandedHeight: 200,
+                  pinned: true,
+                  backgroundColor: Colors.black,
+                  automaticallyImplyLeading: false,
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black,
+                            Colors.black.withOpacity(0.8),
+                          ],
+                        ),
+                      ),
+                      child: SafeArea(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const CircleAvatar(
+                              radius: 40,
+                              backgroundColor: Colors.white,
+                              child: Icon(Icons.person,
+                                  size: 40, color: Colors.black),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              userProvider.name.isEmpty
+                                  ? 'Guest User'
+                                  : userProvider.name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              '${userProvider.membershipLevel} Member',
+                              style: TextStyle(
+                                color: _getMembershipColor(
+                                    userProvider.membershipLevel),
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Profile Content
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        // Quick Actions
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceAround,
+                                children: [
+                                  _buildQuickAction(
+                                    context,
+                                    icon: Icons.hotel,
+                                    label: 'My Bookings',
+                                    onTap: () => Navigator.pushNamed(
+                                        context, '/bookings'),
+                                  ),
+                                  _buildQuickAction(
+                                    context,
+                                    icon: Icons.credit_card,
+                                    label: 'Payment',
+                                    onTap: () => Navigator.pushNamed(
+                                        context, '/payment'),
+                                  ),
+                                  _buildQuickAction(
+                                    context,
+                                    icon: Icons.card_membership,
+                                    label: 'Membership',
+                                    onTap: () => Navigator.pushNamed(
+                                        context, '/membership'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Personal Information Section
+                        const PersonalInfoSection(),
+                        const SizedBox(height: 16),
+
+                        // Saved Information Section
+                        const SavedInfoSection(),
+                        const SizedBox(height: 16),
+
+                        // Statistics Section
+                        const StatisticsSection(),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            bottomNavigationBar: const BottomNavBar(selectedIndex: 3),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildStatItem(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
-        ),
-      ],
-    );
+  Color _getMembershipColor(String level) {
+    switch (level.toLowerCase()) {
+      case 'platinum':
+        return Colors.blueGrey;
+      case 'gold':
+        return Colors.amber;
+      case 'silver':
+        return Colors.grey;
+      default:
+        return Colors.brown;
+    }
   }
 
-  Widget _buildSection(
-    BuildContext context,
-    String title,
-    List<Widget> items, {
-    VoidCallback? onEdit,
+  Widget _buildQuickAction(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
   }) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-          ),
-        ],
-      ),
+    return InkWell(
+      onTap: onTap,
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(15),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (onEdit != null)
-                  TextButton(
-                    onPressed: onEdit,
-                    child: const Text('Edit'),
-                  ),
-              ],
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.black, size: 24),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
             ),
           ),
-          const Divider(height: 1),
-          ...items,
         ],
       ),
-    );
-  }
-
-  Widget _buildInfoItem(IconData icon, String title, String subtitle) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.blue),
-      title: Text(title),
-      subtitle: Text(subtitle),
     );
   }
 }

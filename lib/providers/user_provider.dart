@@ -1,117 +1,228 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'membership_provider.dart';
 
-class UserProvider extends ChangeNotifier {
-  String _name = 'John Doe';
-  String _email = 'john.doe@example.com';
-  String _phone = '+1 234 567 890';
-  String _address = '123 Main St, City';
-  String _profilePhotoPath = 'assets/images/profile_photo.jpeg';
-  
-  // Payment Methods
-  List<Map<String, String>> _paymentMethods = [
-    {'type': 'Visa', 'number': '****4582'},
-    {'type': 'Mastercard', 'number': '****7890'},
-  ];
+class UserProvider with ChangeNotifier {
+  String _name = '';
+  String _email = '';
+  String _phone = '';
+  int _points = 0;
+  String _membershipLevel = 'Bronze';
+  List<SavedCard> _savedCards = [];
+  late MembershipProvider _membershipProvider;
 
-  // Addresses
-  List<Map<String, String>> _addresses = [
-    {'type': 'Home', 'address': '123 Main St, City'},
-    {'type': 'Work', 'address': '456 Office Ave, Business District'},
-  ];
-
-  // Documents
-  List<Map<String, String>> _documents = [
-    {'type': 'Passport', 'expiry': 'Dec 2025'},
-    {'type': 'ID Card', 'expiry': 'Jan 2024'},
-  ];
-
-  // Emergency Contacts
-  List<Map<String, String>> _emergencyContacts = [
-    {'name': 'Jane Doe', 'relation': 'Spouse', 'phone': '+1 234 567 890'},
-  ];
-
-  // Getters
   String get name => _name;
   String get email => _email;
   String get phone => _phone;
-  String get address => _address;
-  String get profilePhotoPath => _profilePhotoPath;
-  List<Map<String, String>> get paymentMethods => List.from(_paymentMethods);
-  List<Map<String, String>> get addresses => List.from(_addresses);
-  List<Map<String, String>> get documents => List.from(_documents);
-  List<Map<String, String>> get emergencyContacts => List.from(_emergencyContacts);
+  int get points => _points;
+  String get membershipLevel => _membershipLevel;
+  List<SavedCard> get savedCards => List.unmodifiable(_savedCards);
 
-  // Initialize data from SharedPreferences
-  Future<void> loadUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    _name = prefs.getString('user_name') ?? _name;
-    _email = prefs.getString('user_email') ?? _email;
-    _phone = prefs.getString('user_phone') ?? _phone;
-    _address = prefs.getString('user_address') ?? _address;
-    _profilePhotoPath = prefs.getString('user_profile_photo') ?? _profilePhotoPath;
-    
+  void initializeMembershipProvider(MembershipProvider provider) {
+    _membershipProvider = provider;
+    _syncWithMembershipProvider();
+  }
+
+  void _syncWithMembershipProvider() {
+    _points = _membershipProvider.points;
+    _membershipLevel = _membershipProvider.tier;
     notifyListeners();
   }
 
-  // Update personal information
-  Future<void> updatePersonalInfo({
+  UserProvider() {
+    loadUserData();
+  }
+
+  Future<void> loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // First try to load from 'name', then fallback to 'username'
+    _name = prefs.getString('name') ?? prefs.getString('username') ?? '';
+    _email = prefs.getString('email') ?? prefs.getString('userEmail') ?? '';
+    _phone = prefs.getString('phone') ?? '';
+
+    // If we have a username, make sure it's saved in both places
+    if (_name.isNotEmpty) {
+      await prefs.setString('name', _name);
+      await prefs.setString('username', _name);
+    }
+
+    // If we have an email, make sure it's saved in both places
+    if (_email.isNotEmpty) {
+      await prefs.setString('email', _email);
+      await prefs.setString('userEmail', _email);
+    }
+
+    // Load saved cards
+    final cardNumbers = prefs.getStringList('cardNumbers') ?? [];
+    final cardTypes = prefs.getStringList('cardTypes') ?? [];
+    final cardHolders = prefs.getStringList('cardHolders') ?? [];
+    final cardExpiries = prefs.getStringList('cardExpiries') ?? [];
+
+    _savedCards = [];
+    for (var i = 0; i < cardNumbers.length; i++) {
+      if (i < cardTypes.length &&
+          i < cardHolders.length &&
+          i < cardExpiries.length) {
+        _savedCards.add(SavedCard(
+          number: cardNumbers[i],
+          type: cardTypes[i],
+          holderName: cardHolders[i],
+          expiryDate: cardExpiries[i],
+        ));
+      }
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> updateUserInfo({
     String? name,
     String? email,
     String? phone,
-    String? address,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    
-    if (name != null) {
+
+    if (name != null && name.isNotEmpty) {
       _name = name;
-      await prefs.setString('user_name', name);
+      // Save name in both places
+      await prefs.setString('name', name);
+      await prefs.setString('username', name);
+      // Update username in MembershipProvider
+      await _membershipProvider.updateUsername(name);
     }
-    if (email != null) {
+    if (email != null && email.isNotEmpty) {
       _email = email;
-      await prefs.setString('user_email', email);
+      // Save email in both places
+      await prefs.setString('email', email);
+      await prefs.setString('userEmail', email);
     }
-    if (phone != null) {
+    if (phone != null && phone.isNotEmpty) {
       _phone = phone;
-      await prefs.setString('user_phone', phone);
-    }
-    if (address != null) {
-      _address = address;
-      await prefs.setString('user_address', address);
+      await prefs.setString('phone', phone);
     }
 
     notifyListeners();
   }
 
-  // Update profile photo
-  Future<void> updateProfilePhoto(String path) async {
+  Future<void> addPoints(int amount) async {
+    await _membershipProvider.addPoints(amount);
+    _syncWithMembershipProvider();
+  }
+
+  String _getMembershipLevel(int points) {
+    if (points >= 10000) return 'Platinum';
+    if (points >= 5000) return 'Gold';
+    if (points >= 2000) return 'Silver';
+    return 'Bronze';
+  }
+
+  // Get points needed for next level
+  int getPointsForNextLevel() {
+    return _membershipProvider.pointsToNextTier;
+  }
+
+  // Get next membership level
+  String getNextMembershipLevel() {
+    return _membershipProvider.getNextTier();
+  }
+
+  Future<void> addCard(SavedCard card) async {
+    _savedCards.add(card);
+    await _saveCards();
+    notifyListeners();
+  }
+
+  Future<void> removeCard(String cardNumber) async {
+    _savedCards.removeWhere((card) => card.number == cardNumber);
+    await _saveCards();
+    notifyListeners();
+  }
+
+  Future<void> _saveCards() async {
     final prefs = await SharedPreferences.getInstance();
-    _profilePhotoPath = path;
-    await prefs.setString('user_profile_photo', path);
+
+    // Save card data
+    await prefs.setStringList(
+        'cardNumbers', _savedCards.map((c) => c.number).toList());
+    await prefs.setStringList(
+        'cardTypes', _savedCards.map((c) => c.type).toList());
+    await prefs.setStringList(
+        'cardHolders', _savedCards.map((c) => c.holderName).toList());
+    await prefs.setStringList(
+        'cardExpiries', _savedCards.map((c) => c.expiryDate).toList());
+  }
+
+  // Clear all user data (for logout)
+  Future<void> clearData() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Store the username and email before clearing
+    final storedUsername = prefs.getString('username');
+    final storedName = prefs.getString('name');
+    final storedEmail = prefs.getString('email');
+    final storedUserEmail = prefs.getString('userEmail');
+
+    // Store card data before clearing
+    final cardNumbers = prefs.getStringList('cardNumbers');
+    final cardTypes = prefs.getStringList('cardTypes');
+    final cardHolders = prefs.getStringList('cardHolders');
+    final cardExpiries = prefs.getStringList('cardExpiries');
+
+    // Clear all data
+    await prefs.clear();
+
+    // Restore username and email if they exist
+    if (storedUsername != null && storedUsername.isNotEmpty) {
+      await prefs.setString('username', storedUsername);
+      await prefs.setString('name', storedUsername);
+    }
+    if (storedEmail != null && storedEmail.isNotEmpty) {
+      await prefs.setString('email', storedEmail);
+      await prefs.setString('userEmail', storedEmail);
+    }
+
+    // Restore card data if it exists
+    if (cardNumbers != null)
+      await prefs.setStringList('cardNumbers', cardNumbers);
+    if (cardTypes != null) await prefs.setStringList('cardTypes', cardTypes);
+    if (cardHolders != null)
+      await prefs.setStringList('cardHolders', cardHolders);
+    if (cardExpiries != null)
+      await prefs.setStringList('cardExpiries', cardExpiries);
+
+    // Reset local state but keep cards
+    _name = storedUsername ?? '';
+    _email = storedEmail ?? '';
+    _phone = '';
+    _points = 0;
+    _membershipLevel = 'Bronze';
+
+    // Clear membership provider data but preserve username
+    await _membershipProvider.clearData(preserveUsername: true);
+
     notifyListeners();
   }
 
-  // Update payment methods
-  void updatePaymentMethods(List<Map<String, String>> methods) {
-    _paymentMethods = List.from(methods);
-    notifyListeners();
+  // Logout method
+  Future<void> logout() async {
+    await clearData();
   }
+}
 
-  // Update addresses
-  void updateAddresses(List<Map<String, String>> addresses) {
-    _addresses = List.from(addresses);
-    notifyListeners();
-  }
+class SavedCard {
+  final String number;
+  final String type;
+  final String holderName;
+  final String expiryDate;
 
-  // Update documents
-  void updateDocuments(List<Map<String, String>> documents) {
-    _documents = List.from(documents);
-    notifyListeners();
-  }
+  SavedCard({
+    required this.number,
+    required this.type,
+    required this.holderName,
+    required this.expiryDate,
+  });
 
-  // Update emergency contacts
-  void updateEmergencyContacts(List<Map<String, String>> contacts) {
-    _emergencyContacts = List.from(contacts);
-    notifyListeners();
-  }
-} 
+  String get maskedNumber =>
+      '**** **** **** ${number.substring(number.length - 4)}';
+}

@@ -36,7 +36,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView( // Makes the whole screen scrollable
+      body: SingleChildScrollView(
+        // Makes the whole screen scrollable
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
@@ -76,14 +77,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             setState(() {
                               selectedCountryCode = newValue!;
                               selectedCountry = countryCodes.firstWhere(
-                                    (element) => element["code"] == newValue,
+                                (element) => element["code"] == newValue,
                               )["name"]!;
                             });
                           },
-                          items: countryCodes.map((Map<String, String> country) {
+                          items:
+                              countryCodes.map((Map<String, String> country) {
                             return DropdownMenuItem<String>(
                               value: country["code"],
-                              child: Text('${country["name"]} (${country["code"]})'),
+                              child: Text(
+                                  '${country["name"]} (${country["code"]})'),
                             );
                           }).toList(),
                         ),
@@ -133,7 +136,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               _buildButton('Continue', () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ResetPasswordScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => ResetPasswordScreen()),
                 );
               }),
               SizedBox(height: 50), // Adds space at the bottom for scrolling

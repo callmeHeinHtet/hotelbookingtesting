@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/user_provider.dart';
+import 'package:hotel_booking/providers/user_provider.dart';
 
 class EditPersonalInfoScreen extends StatefulWidget {
-  const EditPersonalInfoScreen({Key? key}) : super(key: key);
+  const EditPersonalInfoScreen({super.key});
 
   @override
-  _EditPersonalInfoScreenState createState() => _EditPersonalInfoScreenState();
+  State<EditPersonalInfoScreen> createState() => _EditPersonalInfoScreenState();
 }
 
 class _EditPersonalInfoScreenState extends State<EditPersonalInfoScreen> {
+  final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
-  late TextEditingController _addressController;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -22,7 +23,6 @@ class _EditPersonalInfoScreenState extends State<EditPersonalInfoScreen> {
     _nameController = TextEditingController(text: userProvider.name);
     _emailController = TextEditingController(text: userProvider.email);
     _phoneController = TextEditingController(text: userProvider.phone);
-    _addressController = TextEditingController(text: userProvider.address);
   }
 
   @override
@@ -30,8 +30,43 @@ class _EditPersonalInfoScreenState extends State<EditPersonalInfoScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _addressController.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveChanges() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await Provider.of<UserProvider>(context, listen: false).updateUserInfo(
+        name: _nameController.text,
+        email: _emailController.text,
+        phone: _phoneController.text,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to update profile'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -39,29 +74,24 @@ class _EditPersonalInfoScreenState extends State<EditPersonalInfoScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Personal Information'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
           children: [
-            CircleAvatar(
-              radius: 50,
-              backgroundImage: AssetImage(
-                Provider.of<UserProvider>(context).profilePhotoPath,
-              ),
-            ),
-            const SizedBox(height: 20),
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(
                 labelText: 'Full Name',
                 border: OutlineInputBorder(),
               ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your name';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -71,6 +101,15 @@ class _EditPersonalInfoScreenState extends State<EditPersonalInfoScreen> {
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.emailAddress,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your email';
+                }
+                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                  return 'Please enter a valid email';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -80,37 +119,26 @@ class _EditPersonalInfoScreenState extends State<EditPersonalInfoScreen> {
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.phone,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _addressController,
-              decoration: const InputDecoration(
-                labelText: 'Address',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 2,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () async {
-                final userProvider = Provider.of<UserProvider>(context, listen: false);
-                await userProvider.updatePersonalInfo(
-                  name: _nameController.text,
-                  email: _emailController.text,
-                  phone: _phoneController.text,
-                  address: _addressController.text,
-                );
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Personal information updated successfully')),
-                  );
-                  Navigator.pop(context);
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your phone number';
                 }
+                return null;
               },
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16.0),
-                child: Text('Save Changes'),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: _isLoading ? null : _saveChanges,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
               ),
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Save Changes'),
             ),
           ],
         ),

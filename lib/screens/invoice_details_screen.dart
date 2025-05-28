@@ -3,6 +3,7 @@ import '../widgets/bottom_nav_bar.dart';
 import '../services/payment_service.dart';
 import 'package:intl/intl.dart';
 import '../screens/booking_history_screen.dart';
+import '../constants/app_constants.dart';
 
 class InvoiceDetailsScreen extends StatelessWidget {
   final List<Map<String, dynamic>> bookedRooms;
@@ -23,8 +24,22 @@ class InvoiceDetailsScreen extends StatelessWidget {
     final booking = bookedRooms[0];
     final paymentDetails = booking['paymentDetails'];
     final total = booking['totalAmount'] as double;
-    final subtotal = total / 1.1; // Back-calculate subtotal from total (which includes 10% tax)
-    final tax = total - subtotal; // Calculate tax as the difference
+    final nights = booking['nights'] as int;
+    final unitPrice = booking['unitPrice'] as double;
+    final baseAmount = unitPrice * nights;
+    final appliedCoupon = booking['appliedCoupon'] as Map<String, dynamic>?;
+
+    // Calculate amounts
+    double subtotal = baseAmount;
+    double discountAmount = 0.0;
+
+    if (appliedCoupon != null) {
+      final discountPercentage = appliedCoupon['discountPercentage'] as double;
+      discountAmount = baseAmount * (discountPercentage / 100);
+      subtotal = baseAmount - discountAmount;
+    }
+
+    final tax = total - subtotal;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -101,66 +116,6 @@ class InvoiceDetailsScreen extends StatelessWidget {
 
             SizedBox(height: 30),
 
-            // Payment Information
-            Container(
-              padding: EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Payment Information",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                  SizedBox(height: 15),
-                  _buildInfoRow("Payment Date", _formatDate(paymentDetails.paymentDate)),
-                  _buildInfoRow("Due Date", _formatDate(paymentDetails.dueDate)),
-                  _buildInfoRow("Payment Method", "Credit Card"),
-                  _buildInfoRow("Card Number", _formatCardNumber(paymentDetails.cardNumber)),
-                  _buildInfoRow("Card Holder", paymentDetails.cardHolderName),
-                ],
-              ),
-            ),
-
-            SizedBox(height: 20),
-
-            // Bank Information
-            Container(
-              padding: EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Bank Information",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                  SizedBox(height: 15),
-                  _buildInfoRow("Bank Name", booking['bankName']),
-                  _buildInfoRow("Account Name", booking['accountName']),
-                  _buildInfoRow("Account Number", booking['accountNumber']),
-                  _buildInfoRow("Swift Code", booking['swiftCode']),
-                  _buildInfoRow("Branch", booking['bankBranch']),
-                ],
-              ),
-            ),
-
-            SizedBox(height: 20),
-
             // Booking Details
             Container(
               padding: EdgeInsets.all(20),
@@ -235,14 +190,142 @@ class InvoiceDetailsScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(15),
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildPriceRow("Subtotal", subtotal),
+                  Text(
+                    "Price Breakdown",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 15),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("Base Price (${nights} nights)"),
+                      Text("฿${baseAmount.toStringAsFixed(2)}"),
+                    ],
+                  ),
+                  if (appliedCoupon != null) ...[
+                    SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Discount (${appliedCoupon['discountPercentage']}% off)",
+                          style: TextStyle(color: Colors.green),
+                        ),
+                        Text(
+                          "-฿${discountAmount.toStringAsFixed(2)}",
+                          style: TextStyle(color: Colors.green),
+                        ),
+                      ],
+                    ),
+                  ],
                   SizedBox(height: 10),
-                  _buildPriceRow("Tax (10%)", tax),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("Subtotal"),
+                      Text("฿${subtotal.toStringAsFixed(2)}"),
+                    ],
+                  ),
                   SizedBox(height: 10),
-                  Divider(),
-                  SizedBox(height: 10),
-                  _buildPriceRow("Total", total, isTotal: true),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                          "Tax (${(AppConstants.taxRate * 100).toStringAsFixed(0)}%)"),
+                      Text("฿${tax.toStringAsFixed(2)}"),
+                    ],
+                  ),
+                  Divider(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Total",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        "฿${total.toStringAsFixed(2)}",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  if (appliedCoupon != null) ...[
+                    SizedBox(height: 10),
+                    Text(
+                      "Coupon applied: ${appliedCoupon['code']} - ${appliedCoupon['description']}",
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            SizedBox(height: 30),
+
+            // Payment Details
+            Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Payment Details",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  SizedBox(height: 15),
+                  _buildPaymentDetail("Card Number",
+                      _formatCardNumber(paymentDetails.cardNumber)),
+                  _buildPaymentDetail(
+                      "Card Holder", paymentDetails.cardHolderName),
+                  _buildPaymentDetail("Expiry Date", paymentDetails.expiryDate),
+                ],
+              ),
+            ),
+
+            SizedBox(height: 20),
+
+            // Bank Details
+            Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Bank Details",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  SizedBox(height: 15),
+                  _buildPaymentDetail("Bank Name", booking['bankName']),
+                  _buildPaymentDetail("Account Name", booking['accountName']),
+                  _buildPaymentDetail(
+                      "Account Number", booking['accountNumber']),
+                  _buildPaymentDetail("Swift Code", booking['swiftCode']),
+                  _buildPaymentDetail("Branch", booking['bankBranch']),
                 ],
               ),
             ),
@@ -283,7 +366,8 @@ class InvoiceDetailsScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.pushAndRemoveUntil(
                       context,
-                      MaterialPageRoute(builder: (context) => BookingHistoryScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => BookingHistoryScreen()),
                       (route) => false,
                     );
                   },
@@ -312,52 +396,19 @@ class InvoiceDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildPaymentDetail(String label, String value) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 5),
+      padding: EdgeInsets.only(bottom: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(color: Colors.grey[600]),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          Text(value),
         ],
       ),
-    );
-  }
-
-  Widget _buildPriceRow(String label, double amount, {bool isTotal = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: isTotal ? Colors.black : Colors.grey[600],
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
-            fontSize: isTotal ? 18 : 16,
-          ),
-        ),
-        Text(
-          "฿${amount.toStringAsFixed(2)}",
-          style: TextStyle(
-            color: isTotal ? Colors.black : Colors.grey[600],
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
-            fontSize: isTotal ? 18 : 16,
-          ),
-        ),
-      ],
     );
   }
 }

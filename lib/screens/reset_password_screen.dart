@@ -8,7 +8,8 @@ class ResetPasswordScreen extends StatefulWidget {
 
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController = TextEditingController();
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
   String errorMessage = "";
 
   @override
@@ -24,7 +25,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           },
         ),
       ),
-      body: SingleChildScrollView( // Makes the screen scrollable
+      body: SingleChildScrollView(
+        // Makes the screen scrollable
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
@@ -45,11 +47,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               SizedBox(height: 32),
 
               // New Password Field
-              _buildTextField(passwordController, 'New Password', obscureText: true),
+              _buildTextField(passwordController, 'New Password',
+                  obscureText: true),
               SizedBox(height: 16),
 
               // Confirm Password Field
-              _buildTextField(confirmPasswordController, 'Confirm Password', obscureText: true),
+              _buildTextField(confirmPasswordController, 'Confirm Password',
+                  obscureText: true),
               SizedBox(height: 16),
 
               // Error Message
@@ -59,7 +63,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   child: Text(
                     errorMessage,
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: Colors.red, fontWeight: FontWeight.bold),
                   ),
                 ),
 
@@ -88,7 +93,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   }
 
   // Custom TextField with Rounded Design
-  Widget _buildTextField(TextEditingController controller, String hintText, {bool obscureText = false}) {
+  Widget _buildTextField(TextEditingController controller, String hintText,
+      {bool obscureText = false}) {
     return TextField(
       controller: controller,
       obscureText: obscureText,

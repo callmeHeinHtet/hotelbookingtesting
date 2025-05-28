@@ -58,7 +58,11 @@ class _MembershipCardScreenState extends State<MembershipCardScreen> with Single
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/home',
+            (route) => false,
+          ),
         ),
         title: Text("Membership Card", 
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)
@@ -289,11 +293,11 @@ class _MembershipCardScreenState extends State<MembershipCardScreen> with Single
                                 image: AssetImage(provider.profileImagePath),
                                 fit: BoxFit.cover,
                               )
-                            : DecorationImage(
-                                image: AssetImage('assets/images/default_profile.png'),
-                                fit: BoxFit.cover,
-                              ),
+                            : null,
                       ),
+                      child: provider.profileImagePath.isEmpty
+                          ? Icon(Icons.person, size: 30, color: Colors.grey)
+                          : null,
                     ),
                     SizedBox(width: 15),
                     Expanded(
