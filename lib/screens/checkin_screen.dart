@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:table_calendar/table_calendar.dart';
 import '../models/room.dart';
 import '../utils/app_constants.dart';
-import '../utils/app_styles.dart';
 import 'payment_details_screen.dart';
 
-// Add available coupons
 class Coupon {
   final String code;
   final String description;
@@ -31,7 +28,19 @@ class CheckInScreen extends StatefulWidget {
   State<CheckInScreen> createState() => _CheckInScreenState();
 }
 
-class _CheckInScreenState extends State<CheckInScreen> {
+class _CheckInScreenState extends State<CheckInScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
+  // Design constants
+  static const Color _primaryGreen = Color(0xFFB2D732);
+  static const Color _darkBg = Color(0xFF0A0A0A);
+  static const Color _cardBg = Color(0xFF1A1A1A);
+  static const Color _borderColor = Color(0xFF2A2A2A);
+  static const Color _textGrey = Color(0xFF888888);
+  static const Color _accentGold = Color(0xFFD4AF37);
+
   DateTime? checkInDate;
   DateTime? checkOutDate;
   double discountAmount = 0;
@@ -39,8 +48,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
   double serviceCharge = 0;
   String? appliedCoupon;
   bool isApplyingCoupon = false;
+  int _guestCount = 2;
 
-  // List of available coupons
   final List<Coupon> availableCoupons = const [
     Coupon(
       code: 'SAVE10',
@@ -66,11 +75,20 @@ class _CheckInScreenState extends State<CheckInScreen> {
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+    _animationController.forward();
     _calculateCharges();
   }
 
   @override
   void dispose() {
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -79,7 +97,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
       final baseAmount = widget.room.price * numberOfNights;
       setState(() {
         taxAmount = baseAmount * AppConstants.taxRate;
-        serviceCharge = baseAmount * 0.1; // 10% service charge
+        serviceCharge = baseAmount * 0.1;
       });
     }
   }
@@ -89,7 +107,6 @@ class _CheckInScreenState extends State<CheckInScreen> {
       isApplyingCoupon = true;
     });
 
-    // Simulate coupon validation
     Future.delayed(const Duration(milliseconds: 500), () {
       setState(() {
         isApplyingCoupon = false;
@@ -97,13 +114,25 @@ class _CheckInScreenState extends State<CheckInScreen> {
         discountAmount = widget.room.price *
             numberOfNights *
             (coupon.discountPercentage / 100);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${coupon.code} applied successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: _primaryGreen, size: 20),
+              const SizedBox(width: 12),
+              Text('${coupon.code} applied successfully!'),
+            ],
+          ),
+          backgroundColor: _cardBg,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: _primaryGreen.withOpacity(0.3)),
+          ),
+        ),
+      );
     });
   }
 
@@ -111,13 +140,25 @@ class _CheckInScreenState extends State<CheckInScreen> {
     setState(() {
       appliedCoupon = null;
       discountAmount = 0;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Coupon removed'),
-          backgroundColor: Colors.black,
-        ),
-      );
     });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.info_outline, color: _textGrey, size: 20),
+            const SizedBox(width: 12),
+            const Text('Coupon removed'),
+          ],
+        ),
+        backgroundColor: _cardBg,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: _borderColor),
+        ),
+      ),
+    );
   }
 
   Future<void> _selectCheckInDate() async {
@@ -128,13 +169,14 @@ class _CheckInScreenState extends State<CheckInScreen> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Colors.black,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black,
+          data: ThemeData.dark().copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: _primaryGreen,
+              onPrimary: Colors.black,
+              surface: _cardBg,
+              onSurface: Colors.white,
             ),
+            dialogBackgroundColor: _darkBg,
           ),
           child: child!,
         );
@@ -153,7 +195,26 @@ class _CheckInScreenState extends State<CheckInScreen> {
   }
 
   Future<void> _selectCheckOutDate() async {
-    if (checkInDate == null) return;
+    if (checkInDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.warning_amber, color: _accentGold, size: 20),
+              const SizedBox(width: 12),
+              const Text('Please select check-in date first'),
+            ],
+          ),
+          backgroundColor: _cardBg,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: _accentGold.withOpacity(0.3)),
+          ),
+        ),
+      );
+      return;
+    }
 
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -162,13 +223,14 @@ class _CheckInScreenState extends State<CheckInScreen> {
       lastDate: checkInDate!.add(const Duration(days: 30)),
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFFD4E157),
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black,
+          data: ThemeData.dark().copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: _primaryGreen,
+              onPrimary: Colors.black,
+              surface: _cardBg,
+              onSurface: Colors.white,
             ),
+            dialogBackgroundColor: _darkBg,
           ),
           child: child!,
         );
@@ -186,9 +248,20 @@ class _CheckInScreenState extends State<CheckInScreen> {
   void _handlePayment() {
     if (checkInDate == null || checkOutDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select check-in and check-out dates'),
-          backgroundColor: Colors.black,
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.red, size: 20),
+              const SizedBox(width: 12),
+              const Text('Please select check-in and check-out dates'),
+            ],
+          ),
+          backgroundColor: _cardBg,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Colors.red),
+          ),
         ),
       );
       return;
@@ -208,7 +281,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
           nights: numberOfNights,
           checkInDate: checkInDate!,
           checkOutDate: checkOutDate!,
-          guests: widget.room.capacity,
+          guests: _guestCount,
           totalAmount: totalAmount,
           imagePath: widget.room.images.first,
         ),
@@ -218,289 +291,268 @@ class _CheckInScreenState extends State<CheckInScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: Theme.of(context).copyWith(
-        primaryColor: Colors.black,
-        colorScheme: const ColorScheme.light(
-          primary: Colors.black,
-          secondary: Colors.black,
-        ),
-      ),
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.black,
-          title: const Text('Check-in', style: TextStyle(color: Colors.white)),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        body: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Room image and details
-                      Container(
-                        height: 200,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          image: DecorationImage(
-                            image: AssetImage(widget.room.images.first),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        widget.room.name,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        widget.room.description,
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Date Selection
-                      const Text(
-                        'Select Dates',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _selectCheckInDate,
-                              icon: const Icon(Icons.calendar_today,
-                                  color: Colors.black),
-                              label: Text(
-                                checkInDate != null
-                                    ? DateFormat('MMM d, y')
-                                        .format(checkInDate!)
-                                    : 'Check-in',
-                                style: const TextStyle(color: Colors.black),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFD4E157),
-                                foregroundColor: Colors.black,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _selectCheckOutDate,
-                              icon: const Icon(Icons.calendar_today,
-                                  color: Colors.black),
-                              label: Text(
-                                checkOutDate != null
-                                    ? DateFormat('MMM d, y')
-                                        .format(checkOutDate!)
-                                    : 'Check-out',
-                                style: const TextStyle(color: Colors.black),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFD4E157),
-                                foregroundColor: Colors.black,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Coupon Section
-                      if (availableCoupons.isNotEmpty) ...[
-                        const Text(
-                          'Available Coupons',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        ...availableCoupons
-                            .map((coupon) => Container(
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: appliedCoupon == coupon.code
-                                        ? const Color(0xFFD4E157)
-                                        : Colors.grey[100],
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.local_offer,
-                                        color: appliedCoupon == coupon.code
-                                            ? Colors.black
-                                            : Colors.grey[600],
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              coupon.code,
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color:
-                                                    appliedCoupon == coupon.code
-                                                        ? Colors.black
-                                                        : Colors.grey[800],
-                                              ),
-                                            ),
-                                            Text(
-                                              coupon.description,
-                                              style: TextStyle(
-                                                color:
-                                                    appliedCoupon == coupon.code
-                                                        ? Colors.black
-                                                        : Colors.grey[600],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          if (appliedCoupon == coupon.code) {
-                                            _removeCoupon();
-                                          } else {
-                                            _applyCoupon(coupon);
-                                          }
-                                        },
-                                        style: TextButton.styleFrom(
-                                          backgroundColor:
-                                              appliedCoupon == coupon.code
-                                                  ? Colors.black
-                                                  : const Color(0xFFD4E157),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 16,
-                                            vertical: 8,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(20),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          appliedCoupon == coupon.code
-                                              ? 'Remove'
-                                              : 'Apply',
-                                          style: TextStyle(
-                                            color: appliedCoupon == coupon.code
-                                                ? Colors.white
-                                                : Colors.black,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ))
-                            .toList(),
-                      ],
-                      const SizedBox(height: 24),
-
-                      // Price Breakdown
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Price Details',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            _buildPriceRow(
-                              'Room Rate (per night)',
-                              widget.room.price,
-                            ),
-                            _buildPriceRow(
-                              'Number of Nights',
-                              numberOfNights.toDouble(),
-                              isNumber: true,
-                            ),
-                            const Divider(),
-                            _buildPriceRow(
-                              'Subtotal',
-                              widget.room.price * numberOfNights,
-                              isBold: true,
-                            ),
-                            if (appliedCoupon != null)
-                              _buildPriceRow(
-                                'Discount ($appliedCoupon)',
-                                -discountAmount,
-                                isDiscount: true,
-                              ),
-                            _buildPriceRow('Taxes', taxAmount),
-                            _buildPriceRow('Service Charge', serviceCharge),
-                            const Divider(thickness: 2),
-                            _buildPriceRow(
-                              'Total',
-                              (widget.room.price * numberOfNights) +
-                                  taxAmount +
-                                  serviceCharge -
-                                  discountAmount,
-                              isBold: true,
-                              isTotal: true,
-                            ),
+    return Scaffold(
+      backgroundColor: _darkBg,
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: CustomScrollView(
+          slivers: [
+            // App Bar with Room Image
+            SliverAppBar(
+              expandedHeight: 220,
+              pinned: true,
+              backgroundColor: _darkBg,
+              leading: IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _cardBg.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.arrow_back_ios_new,
+                      color: Colors.white, size: 18),
+                ),
+                onPressed: () => Navigator.pop(context),
+              ),
+              flexibleSpace: FlexibleSpaceBar(
+                background: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(
+                      widget.room.images.first,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: _cardBg,
+                          child: Icon(Icons.hotel, size: 60, color: _textGrey),
+                        );
+                      },
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            _darkBg.withOpacity(0.9),
                           ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    Positioned(
+                      bottom: 20,
+                      left: 20,
+                      right: 20,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.room.name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.room.description,
+                            style: TextStyle(
+                              color: _textGrey,
+                              fontSize: 14,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _handlePayment,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFD4E157),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+
+            // Content
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Date Selection Section
+                    _buildSectionTitle('Select Dates'),
+                    const SizedBox(height: 16),
+                    _buildDateSelection(),
+                    const SizedBox(height: 24),
+
+                    // Guest Count Section
+                    _buildSectionTitle('Guests'),
+                    const SizedBox(height: 16),
+                    _buildGuestSelector(),
+                    const SizedBox(height: 24),
+
+                    // Available Coupons Section
+                    if (availableCoupons.isNotEmpty) ...[
+                      _buildSectionTitle('Available Coupons'),
+                      const SizedBox(height: 16),
+                      ...availableCoupons.map((coupon) => _buildCouponCard(coupon)),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // Price Breakdown Section
+                    _buildSectionTitle('Price Details'),
+                    const SizedBox(height: 16),
+                    _buildPriceBreakdown(),
+                    const SizedBox(height: 100),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: _buildBottomBar(),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 20,
+          decoration: BoxDecoration(
+            color: _primaryGreen,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateSelection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _borderColor),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _buildDateButton(
+                  icon: Icons.login,
+                  label: 'Check-in',
+                  date: checkInDate,
+                  onTap: _selectCheckInDate,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _primaryGreen.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.arrow_forward, color: _primaryGreen, size: 20),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildDateButton(
+                  icon: Icons.logout,
+                  label: 'Check-out',
+                  date: checkOutDate,
+                  onTap: _selectCheckOutDate,
+                ),
+              ),
+            ],
+          ),
+          if (numberOfNights > 0) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: _primaryGreen.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.nights_stay, color: _primaryGreen, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    '$numberOfNights ${numberOfNights == 1 ? 'Night' : 'Nights'}',
+                    style: TextStyle(
+                      color: _primaryGreen,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  child: const Text(
-                    'Proceed to Payment',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                    ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateButton({
+    required IconData icon,
+    required String label,
+    required DateTime? date,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _darkBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: date != null ? _primaryGreen : _borderColor,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: _primaryGreen, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: _textGrey,
+                    fontSize: 12,
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              date != null
+                  ? DateFormat('MMM d, y').format(date)
+                  : 'Select date',
+              style: TextStyle(
+                color: date != null ? Colors.white : _textGrey,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
@@ -509,39 +561,414 @@ class _CheckInScreenState extends State<CheckInScreen> {
     );
   }
 
-  Widget _buildPriceRow(
-    String label,
-    double amount, {
-    bool isBold = false,
-    bool isTotal = false,
-    bool isNumber = false,
-    bool isDiscount = false,
-  }) {
-    final textStyle = TextStyle(
-      fontWeight: isBold || isTotal ? FontWeight.bold : FontWeight.normal,
-      fontSize: isTotal ? 18 : 14,
-      color: isDiscount ? Colors.green : null,
-    );
-
-    final formatter = NumberFormat.currency(
-      locale: 'th_TH',
-      symbol: '฿',
-      decimalDigits: 0,
-    );
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+  Widget _buildGuestSelector() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _borderColor),
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-            child: Text(label, style: textStyle),
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: _primaryGreen.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(Icons.people, color: _primaryGreen, size: 24),
           ),
-          Text(
-            isNumber ? amount.toInt().toString() : formatter.format(amount),
-            style: textStyle,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Number of Guests',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Max ${widget.room.capacity} guests',
+                  style: TextStyle(
+                    color: _textGrey,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: _darkBg,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _borderColor),
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: Icon(
+                    Icons.remove,
+                    color: _guestCount > 1 ? _primaryGreen : _textGrey,
+                    size: 20,
+                  ),
+                  onPressed: _guestCount > 1
+                      ? () => setState(() => _guestCount--)
+                      : null,
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    '$_guestCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.add,
+                    color: _guestCount < widget.room.capacity
+                        ? _primaryGreen
+                        : _textGrey,
+                    size: 20,
+                  ),
+                  onPressed: _guestCount < widget.room.capacity
+                      ? () => setState(() => _guestCount++)
+                      : null,
+                ),
+              ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCouponCard(Coupon coupon) {
+    final isApplied = appliedCoupon == coupon.code;
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 300 + availableCoupons.indexOf(coupon) * 100),
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isApplied ? _primaryGreen.withOpacity(0.1) : _cardBg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isApplied ? _primaryGreen : _borderColor,
+            width: isApplied ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: isApplied
+                    ? _primaryGreen.withOpacity(0.2)
+                    : _primaryGreen.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.local_offer,
+                color: _primaryGreen,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        coupon.code,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _accentGold.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '${coupon.discountPercentage.toInt()}% OFF',
+                          style: TextStyle(
+                            color: _accentGold,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    coupon.description,
+                    style: TextStyle(
+                      color: _textGrey,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            ElevatedButton(
+              onPressed: isApplyingCoupon
+                  ? null
+                  : () {
+                      if (isApplied) {
+                        _removeCoupon();
+                      } else {
+                        _applyCoupon(coupon);
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isApplied ? Colors.red : _primaryGreen,
+                foregroundColor: isApplied ? Colors.white : Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+              child: isApplyingCoupon
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(_primaryGreen),
+                      ),
+                    )
+                  : Text(
+                      isApplied ? 'Remove' : 'Apply',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPriceBreakdown() {
+    final subtotal = widget.room.price * numberOfNights;
+    final total = subtotal + taxAmount + serviceCharge - discountAmount;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _borderColor),
+      ),
+      child: Column(
+        children: [
+          _buildPriceRow(
+            'Room Rate',
+            '฿${widget.room.price.toStringAsFixed(0)}/night',
+          ),
+          const SizedBox(height: 12),
+          _buildPriceRow(
+            'Number of Nights',
+            '$numberOfNights',
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Divider(color: _borderColor, height: 1),
+          ),
+          _buildPriceRow(
+            'Subtotal',
+            '฿${subtotal.toStringAsFixed(0)}',
+            isBold: true,
+          ),
+          const SizedBox(height: 12),
+          if (appliedCoupon != null) ...[
+            _buildPriceRow(
+              'Discount ($appliedCoupon)',
+              '-฿${discountAmount.toStringAsFixed(0)}',
+              isDiscount: true,
+            ),
+            const SizedBox(height: 12),
+          ],
+          _buildPriceRow(
+            'Taxes (${(AppConstants.taxRate * 100).toInt()}%)',
+            '฿${taxAmount.toStringAsFixed(0)}',
+          ),
+          const SizedBox(height: 12),
+          _buildPriceRow(
+            'Service Charge (10%)',
+            '฿${serviceCharge.toStringAsFixed(0)}',
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Container(
+              height: 2,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [_primaryGreen.withOpacity(0.3), _borderColor],
+                ),
+              ),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Total',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                '฿${total.toStringAsFixed(0)}',
+                style: TextStyle(
+                  color: _primaryGreen,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriceRow(String label, String value,
+      {bool isBold = false, bool isDiscount = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: isDiscount ? _primaryGreen : _textGrey,
+            fontSize: 14,
+            fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: isDiscount
+                ? _primaryGreen
+                : (isBold ? Colors.white : _textGrey),
+            fontSize: isBold ? 15 : 14,
+            fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBottomBar() {
+    final total = (widget.room.price * numberOfNights) +
+        taxAmount +
+        serviceCharge -
+        discountAmount;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _cardBg,
+        border: Border(top: BorderSide(color: _borderColor)),
+      ),
+      child: SafeArea(
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Total Amount',
+                    style: TextStyle(
+                      color: _textGrey,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    numberOfNights > 0 ? '฿${total.toStringAsFixed(0)}' : '฿0',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _handlePayment,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _primaryGreen,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Continue',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Icon(Icons.arrow_forward, size: 18),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

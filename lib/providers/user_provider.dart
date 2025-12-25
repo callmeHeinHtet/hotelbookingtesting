@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'membership_provider.dart';
@@ -9,6 +10,9 @@ class UserProvider with ChangeNotifier {
   int _points = 0;
   String _membershipLevel = 'Bronze';
   List<SavedCard> _savedCards = [];
+  List<SavedAddress> _savedAddresses = [];
+  List<SavedDocument> _savedDocuments = [];
+  List<EmergencyContact> _emergencyContacts = [];
   late MembershipProvider _membershipProvider;
 
   String get name => _name;
@@ -17,6 +21,9 @@ class UserProvider with ChangeNotifier {
   int get points => _points;
   String get membershipLevel => _membershipLevel;
   List<SavedCard> get savedCards => List.unmodifiable(_savedCards);
+  List<SavedAddress> get savedAddresses => List.unmodifiable(_savedAddresses);
+  List<SavedDocument> get savedDocuments => List.unmodifiable(_savedDocuments);
+  List<EmergencyContact> get emergencyContacts => List.unmodifiable(_emergencyContacts);
 
   void initializeMembershipProvider(MembershipProvider provider) {
     _membershipProvider = provider;
@@ -72,6 +79,24 @@ class UserProvider with ChangeNotifier {
         ));
       }
     }
+
+    // Load saved addresses
+    final addressesJson = prefs.getStringList('savedAddresses') ?? [];
+    _savedAddresses = addressesJson
+        .map((json) => SavedAddress.fromJson(jsonDecode(json)))
+        .toList();
+
+    // Load saved documents
+    final documentsJson = prefs.getStringList('savedDocuments') ?? [];
+    _savedDocuments = documentsJson
+        .map((json) => SavedDocument.fromJson(jsonDecode(json)))
+        .toList();
+
+    // Load emergency contacts
+    final contactsJson = prefs.getStringList('emergencyContacts') ?? [];
+    _emergencyContacts = contactsJson
+        .map((json) => EmergencyContact.fromJson(jsonDecode(json)))
+        .toList();
 
     notifyListeners();
   }
@@ -153,6 +178,123 @@ class UserProvider with ChangeNotifier {
         'cardExpiries', _savedCards.map((c) => c.expiryDate).toList());
   }
 
+  // Address management
+  Future<void> addAddress(SavedAddress address) async {
+    // If this is the first address or marked as default, ensure only one default
+    if (address.isDefault || _savedAddresses.isEmpty) {
+      _savedAddresses = _savedAddresses.map((a) => SavedAddress(
+        id: a.id,
+        label: a.label,
+        addressLine1: a.addressLine1,
+        addressLine2: a.addressLine2,
+        city: a.city,
+        state: a.state,
+        postalCode: a.postalCode,
+        country: a.country,
+        isDefault: false,
+      )).toList();
+    }
+    _savedAddresses.add(address);
+    await _saveAddresses();
+    notifyListeners();
+  }
+
+  Future<void> updateAddress(SavedAddress address) async {
+    final index = _savedAddresses.indexWhere((a) => a.id == address.id);
+    if (index != -1) {
+      if (address.isDefault) {
+        _savedAddresses = _savedAddresses.map((a) => SavedAddress(
+          id: a.id,
+          label: a.label,
+          addressLine1: a.addressLine1,
+          addressLine2: a.addressLine2,
+          city: a.city,
+          state: a.state,
+          postalCode: a.postalCode,
+          country: a.country,
+          isDefault: false,
+        )).toList();
+      }
+      _savedAddresses[index] = address;
+      await _saveAddresses();
+      notifyListeners();
+    }
+  }
+
+  Future<void> removeAddress(String addressId) async {
+    _savedAddresses.removeWhere((a) => a.id == addressId);
+    await _saveAddresses();
+    notifyListeners();
+  }
+
+  Future<void> _saveAddresses() async {
+    final prefs = await SharedPreferences.getInstance();
+    final addressesJson = _savedAddresses
+        .map((a) => jsonEncode(a.toJson()))
+        .toList();
+    await prefs.setStringList('savedAddresses', addressesJson);
+  }
+
+  // Document management
+  Future<void> addDocument(SavedDocument document) async {
+    _savedDocuments.add(document);
+    await _saveDocuments();
+    notifyListeners();
+  }
+
+  Future<void> updateDocument(SavedDocument document) async {
+    final index = _savedDocuments.indexWhere((d) => d.id == document.id);
+    if (index != -1) {
+      _savedDocuments[index] = document;
+      await _saveDocuments();
+      notifyListeners();
+    }
+  }
+
+  Future<void> removeDocument(String documentId) async {
+    _savedDocuments.removeWhere((d) => d.id == documentId);
+    await _saveDocuments();
+    notifyListeners();
+  }
+
+  Future<void> _saveDocuments() async {
+    final prefs = await SharedPreferences.getInstance();
+    final documentsJson = _savedDocuments
+        .map((d) => jsonEncode(d.toJson()))
+        .toList();
+    await prefs.setStringList('savedDocuments', documentsJson);
+  }
+
+  // Emergency contact management
+  Future<void> addEmergencyContact(EmergencyContact contact) async {
+    _emergencyContacts.add(contact);
+    await _saveEmergencyContacts();
+    notifyListeners();
+  }
+
+  Future<void> updateEmergencyContact(EmergencyContact contact) async {
+    final index = _emergencyContacts.indexWhere((c) => c.id == contact.id);
+    if (index != -1) {
+      _emergencyContacts[index] = contact;
+      await _saveEmergencyContacts();
+      notifyListeners();
+    }
+  }
+
+  Future<void> removeEmergencyContact(String contactId) async {
+    _emergencyContacts.removeWhere((c) => c.id == contactId);
+    await _saveEmergencyContacts();
+    notifyListeners();
+  }
+
+  Future<void> _saveEmergencyContacts() async {
+    final prefs = await SharedPreferences.getInstance();
+    final contactsJson = _emergencyContacts
+        .map((c) => jsonEncode(c.toJson()))
+        .toList();
+    await prefs.setStringList('emergencyContacts', contactsJson);
+  }
+
   // Clear all user data (for logout)
   Future<void> clearData() async {
     final prefs = await SharedPreferences.getInstance();
@@ -225,4 +367,131 @@ class SavedCard {
 
   String get maskedNumber =>
       '**** **** **** ${number.substring(number.length - 4)}';
+}
+
+class SavedAddress {
+  final String id;
+  final String label;
+  final String addressLine1;
+  final String addressLine2;
+  final String city;
+  final String state;
+  final String postalCode;
+  final String country;
+  final bool isDefault;
+
+  SavedAddress({
+    required this.id,
+    required this.label,
+    required this.addressLine1,
+    this.addressLine2 = '',
+    required this.city,
+    required this.state,
+    required this.postalCode,
+    required this.country,
+    this.isDefault = false,
+  });
+
+  String get fullAddress {
+    final parts = [addressLine1];
+    if (addressLine2.isNotEmpty) parts.add(addressLine2);
+    parts.add('$city, $state $postalCode');
+    parts.add(country);
+    return parts.join('\n');
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'label': label,
+    'addressLine1': addressLine1,
+    'addressLine2': addressLine2,
+    'city': city,
+    'state': state,
+    'postalCode': postalCode,
+    'country': country,
+    'isDefault': isDefault,
+  };
+
+  factory SavedAddress.fromJson(Map<String, dynamic> json) => SavedAddress(
+    id: json['id'] ?? '',
+    label: json['label'] ?? '',
+    addressLine1: json['addressLine1'] ?? '',
+    addressLine2: json['addressLine2'] ?? '',
+    city: json['city'] ?? '',
+    state: json['state'] ?? '',
+    postalCode: json['postalCode'] ?? '',
+    country: json['country'] ?? '',
+    isDefault: json['isDefault'] ?? false,
+  );
+}
+
+class SavedDocument {
+  final String id;
+  final String type;
+  final String documentNumber;
+  final String issuingCountry;
+  final DateTime? expiryDate;
+
+  SavedDocument({
+    required this.id,
+    required this.type,
+    required this.documentNumber,
+    required this.issuingCountry,
+    this.expiryDate,
+  });
+
+  bool get isExpired => expiryDate != null && expiryDate!.isBefore(DateTime.now());
+
+  String get maskedNumber {
+    if (documentNumber.length <= 4) return documentNumber;
+    return '****${documentNumber.substring(documentNumber.length - 4)}';
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'type': type,
+    'documentNumber': documentNumber,
+    'issuingCountry': issuingCountry,
+    'expiryDate': expiryDate?.toIso8601String(),
+  };
+
+  factory SavedDocument.fromJson(Map<String, dynamic> json) => SavedDocument(
+    id: json['id'] ?? '',
+    type: json['type'] ?? '',
+    documentNumber: json['documentNumber'] ?? '',
+    issuingCountry: json['issuingCountry'] ?? '',
+    expiryDate: json['expiryDate'] != null ? DateTime.parse(json['expiryDate']) : null,
+  );
+}
+
+class EmergencyContact {
+  final String id;
+  final String name;
+  final String relationship;
+  final String phone;
+  final String email;
+
+  EmergencyContact({
+    required this.id,
+    required this.name,
+    required this.relationship,
+    required this.phone,
+    this.email = '',
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'relationship': relationship,
+    'phone': phone,
+    'email': email,
+  };
+
+  factory EmergencyContact.fromJson(Map<String, dynamic> json) => EmergencyContact(
+    id: json['id'] ?? '',
+    name: json['name'] ?? '',
+    relationship: json['relationship'] ?? '',
+    phone: json['phone'] ?? '',
+    email: json['email'] ?? '',
+  );
 }

@@ -4,22 +4,23 @@ import 'screens/login_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/reset_password_screen.dart';
 import 'screens/welcome_screen.dart';
-import 'screens/checkin_screen.dart';
-import 'screens/payment_details_screen.dart';
-import 'screens/invoice_details_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/membership_card_screen.dart';
 import 'screens/booking_history_screen.dart';
-import 'screens/services_screen.dart';  // ✅ Services Screen Import
+import 'screens/services_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/edit_personal_info_screen.dart';
-import 'utils/booking_data.dart';
+import 'screens/edit_payment_methods_screen.dart';
+import 'screens/edit_addresses_screen.dart';
+import 'screens/edit_documents_screen.dart';
+import 'screens/edit_emergency_contacts_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'providers/tab_provider.dart';
 import 'providers/membership_provider.dart';
 import 'providers/user_provider.dart';
+import 'providers/booking_provider.dart';
 import 'screens/add_payment_method_screen.dart';
 
 void main() async {
@@ -27,7 +28,6 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  initializeDummyBookings();
   runApp(const MyApp());
 }
 
@@ -40,6 +40,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => TabProvider()),
         ChangeNotifierProvider(create: (_) => MembershipProvider()..initialize()),
+        ChangeNotifierProvider(create: (_) => BookingProvider()..initialize()),
         ChangeNotifierProxyProvider<MembershipProvider, UserProvider>(
           create: (_) => UserProvider(),
           update: (_, membershipProvider, userProvider) {
@@ -71,10 +72,10 @@ class MyApp extends StatelessWidget {
           '/services': (context) => ServicesScreen(),  // ✅ Correct navigation
           '/settings': (context) => SettingsScreen(),
           '/edit-personal-info': (context) => EditPersonalInfoScreen(),
-          '/edit-payment-methods': (context) => ProfileScreen(), // TODO: Create EditPaymentMethodsScreen
-          '/edit-addresses': (context) => ProfileScreen(), // TODO: Create EditAddressesScreen
-          '/edit-documents': (context) => ProfileScreen(), // TODO: Create EditDocumentsScreen
-          '/edit-emergency-contacts': (context) => ProfileScreen(), // TODO: Create EditEmergencyContactsScreen
+          '/edit-payment-methods': (context) => const EditPaymentMethodsScreen(),
+          '/edit-addresses': (context) => const EditAddressesScreen(),
+          '/edit-documents': (context) => const EditDocumentsScreen(),
+          '/edit-emergency-contacts': (context) => const EditEmergencyContactsScreen(),
           '/add-payment-method': (context) => const AddPaymentMethodScreen(),
           '/payment': (context) => const AddPaymentMethodScreen(),
         },
