@@ -4,7 +4,7 @@ A luxury-themed Flutter application for hotel bookings with dark UI and premium 
 
 ## Live Demo
 
-**[View Demo](https://heinh.github.io/hotelbookingtesting)**
+**[View Demo](https://callmeHeinHtet.github.io/hotelbookingtesting)**
 
 ### View as Mobile App
 
