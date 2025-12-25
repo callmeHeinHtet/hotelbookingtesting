@@ -1,6 +1,33 @@
 # Hotel Booking App
 
-A modern Flutter application for hotel bookings with a clean UI and comprehensive feature set.
+A luxury-themed Flutter application for hotel bookings with dark UI and premium design.
+
+## Live Demo
+
+**[View Demo](https://heinh.github.io/hotelbookingtesting)**
+
+### View as Mobile App
+
+To experience the app in phone layout:
+
+1. Open the demo link in **Chrome** or **Edge**
+2. Press `F12` to open Developer Tools
+3. Click the **Toggle Device Toolbar** button (or press `Ctrl + Shift + M`)
+4. Select a phone device from the dropdown (iPhone 14, Pixel 7, etc.)
+5. Refresh the page (`F5`)
+
+> **Tip:** On mobile devices, the app automatically displays in phone layout!
+
+## Design System
+
+| Element | Color |
+|---------|-------|
+| Primary Green | `#B2D732` |
+| Dark Background | `#0A0A0A` |
+| Card Background | `#1A1A1A` |
+| Border Color | `#2A2A2A` |
+| Text Grey | `#888888` |
+| Gold Accent | `#D4AF37` |
 
 ## Features
 
